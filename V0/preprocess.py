@@ -1,7 +1,7 @@
 from paths import *
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument('--clip_msra',action='store_true',default=True)
+parser.add_argument('--clip_msra',action='store_true')
 
 args = parser.parse_args()
 

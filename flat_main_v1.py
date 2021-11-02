@@ -1,6 +1,6 @@
 import fitlog
 
-use_fitlog = True
+use_fitlog = False
 if not use_fitlog:
     fitlog.debug()
 fitlog.set_log_dir('logs')
@@ -10,10 +10,11 @@ fitlog.set_rng_seed(load_dataset_seed)
 import sys
 
 sys.path.append('../')
-from load_data import *
+from load_data_v1 import *
 import argparse
 from paths import *
-from fastNLP.core import Trainer
+# from fastNLP.core import Trainer
+from fastNLP.core.my_trainer import Trainer
 # from trainer import Trainer
 from fastNLP.core import Callback
 from V1.models import Lattice_Transformer_SeqLabel, Transformer_SeqLabel
@@ -41,7 +42,8 @@ import warnings
 import sys
 from utils import print_info
 # from fastNLP.embeddings import BertEmbedding
-from fastNLP_module import BertEmbedding
+# from fastNLP_module import BertEmbedding
+from fastNLP_module_v1 import BertEmbedding
 from V1.models import BERT_SeqLabel
 
 # def warn_with_traceback(message, category, filename, lineno, file=None, line=None):
@@ -275,16 +277,25 @@ elif args.dataset == 'toy':
                                                 _cache_fp=raw_dataset_cache_name
                                                 )
 
+# elif args.dataset == 'msra':
+#     datasets, vocabs, embeddings = load_msra_ner_without_dev(msra_ner_cn_path, yangjie_rich_pretrain_unigram_path,
+#                                                              yangjie_rich_pretrain_bigram_path,
+#                                                              _refresh=refresh_data, index_token=False,
+#                                                              train_clip=args.train_clip,
+#                                                              _cache_fp=raw_dataset_cache_name,
+#                                                              char_min_freq=args.char_min_freq,
+#                                                              bigram_min_freq=args.bigram_min_freq,
+#                                                              only_train_min_freq=args.only_train_min_freq
+#                                                              )
 elif args.dataset == 'msra':
-    datasets, vocabs, embeddings = load_msra_ner_without_dev(msra_ner_cn_path, yangjie_rich_pretrain_unigram_path,
-                                                             yangjie_rich_pretrain_bigram_path,
-                                                             _refresh=refresh_data, index_token=False,
-                                                             train_clip=args.train_clip,
-                                                             _cache_fp=raw_dataset_cache_name,
-                                                             char_min_freq=args.char_min_freq,
-                                                             bigram_min_freq=args.bigram_min_freq,
-                                                             only_train_min_freq=args.only_train_min_freq
-                                                             )
+    datasets,vocabs,embeddings = load_msra_ner_1(msra_ner_cn_path,yangjie_rich_pretrain_unigram_path,
+                                                           yangjie_rich_pretrain_bigram_path,
+                                                           _refresh=refresh_data,index_token=False,train_clip=args.train_clip,
+                                                           _cache_fp=raw_dataset_cache_name,
+                                                           char_min_freq=args.char_min_freq,
+                                                           bigram_min_freq=args.bigram_min_freq,
+                                                           only_train_min_freq=args.only_train_min_freq
+                                                           )
 
 if args.gaz_dropout < 0:
     args.gaz_dropout = args.embed_dropout
@@ -508,6 +519,8 @@ if args.model == 'transformer':
         if args.use_bert:
             bert_embedding = BertEmbedding(vocabs['lattice'], model_dir_or_name='cn-wwm', requires_grad=False,
                                            word_dropout=0.01)
+#             print('bert_embedding:')
+#             print(bert_embedding)
         else:
             bert_embedding = None
         if args.only_bert:
@@ -598,9 +611,12 @@ with torch.no_grad():
     print_info('{}init pram{}'.format('*' * 15, '*' * 15))
 
 loss = LossInForward()
-encoding_type = 'bmeso'
-if args.dataset == 'weibo':
+# encoding_type = 'bmeso'
+encoding_type = 'bioes'
+if args.dataset == 'weibo' or args.dataset == 'clue':
     encoding_type = 'bio'
+if args.dataset == 'msra':
+    encoding_type = 'bioes'
 f1_metric = SpanFPreRecMetric(vocabs['label'], pred='pred', target='target', seq_len='seq_len',
                               encoding_type=encoding_type)
 acc_metric = AccuracyMetric(pred='pred', target='target', seq_len='seq_len', )
@@ -736,6 +752,7 @@ callbacks = [
     clip_callback
 ]
 if args.use_bert:
+    print('!!!!!use bert!!!!!')
     if args.fix_bert_epoch != 0:
         callbacks.append(Unfreeze_Callback(bert_embedding, args.fix_bert_epoch))
     else:
@@ -768,6 +785,7 @@ if args.status == 'train':
                       metrics=metrics,
                       device=device, callbacks=callbacks, dev_batch_size=args.test_batch,
                       test_use_tqdm=False, check_code_level=-1,
-                      update_every=args.update_every)
+                      update_every=args.update_every,
+                      save_path='/data/jupyter/root/disk/11_back/weigths/flat_lattice/{}/'.format(args.dataset))
 
     trainer.train()

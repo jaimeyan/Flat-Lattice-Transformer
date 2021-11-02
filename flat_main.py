@@ -41,7 +41,7 @@ import warnings
 import sys
 from utils import print_info
 # from fastNLP.embeddings import BertEmbedding
-from fastNLP_module import BertEmbedding
+from fastNLP_module_v1 import BertEmbedding
 from V1.models import BERT_SeqLabel
 
 # def warn_with_traceback(message, category, filename, lineno, file=None, line=None):
@@ -276,7 +276,7 @@ elif args.dataset == 'toy':
                                                 )
 
 elif args.dataset == 'msra':
-    datasets, vocabs, embeddings = load_msra_ner_without_dev(msra_ner_cn_path, yangjie_rich_pretrain_unigram_path,
+    datasets, vocabs, embeddings = load_msra_ner_1(msra_ner_cn_path, yangjie_rich_pretrain_unigram_path,
                                                              yangjie_rich_pretrain_bigram_path,
                                                              _refresh=refresh_data, index_token=False,
                                                              train_clip=args.train_clip,
@@ -599,8 +599,10 @@ with torch.no_grad():
 
 loss = LossInForward()
 encoding_type = 'bmeso'
-if args.dataset == 'weibo':
+if args.dataset == 'weibo' or args.dataset == 'clue':
     encoding_type = 'bio'
+if args.dataset == 'msra':
+    encoding_type = 'bioes'
 f1_metric = SpanFPreRecMetric(vocabs['label'], pred='pred', target='target', seq_len='seq_len',
                               encoding_type=encoding_type)
 acc_metric = AccuracyMetric(pred='pred', target='target', seq_len='seq_len', )
@@ -768,6 +770,7 @@ if args.status == 'train':
                       metrics=metrics,
                       device=device, callbacks=callbacks, dev_batch_size=args.test_batch,
                       test_use_tqdm=False, check_code_level=-1,
-                      update_every=args.update_every)
+                      update_every=args.update_every,
+                      save_path='output/{}/v0/'.format(args.dataset))
 
     trainer.train()

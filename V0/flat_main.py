@@ -11,7 +11,8 @@ sys.path.append('../')
 from load_data import *
 import argparse
 from paths import *
-from fastNLP.core import Trainer
+# from fastNLP.core import Trainer
+from fastNLP.core.my_trainer import Trainer
 # from trainer import Trainer
 from fastNLP.core import Callback
 from V0.models import Lattice_Transformer_SeqLabel, Transformer_SeqLabel
@@ -143,7 +144,7 @@ parser.add_argument('--abs_pos_fusion_func',default='nonlinear_add',
 
 
 
-parser.add_argument('--dataset', default='weibo', help='weibo|resume|ontonote|msra')
+parser.add_argument('--dataset', default='ontonotes', help='weibo|resume|ontonote|msra')
 
 args = parser.parse_args()
 if args.ff_dropout_2 < 0:
@@ -179,7 +180,7 @@ if args.device!='cpu':
 else:
     device = torch.device('cpu')
 
-refresh_data = True
+refresh_data = False
 # import random
 # print('**'*12,random.random,'**'*12)
 
@@ -414,9 +415,9 @@ dropout['ff_2'] = args.ff_dropout_2
 dropout['attn'] = args.attn_dropout
 
 
-# torch.backends.cudnn.benchmark = False
-# fitlog.set_rng_seed(args.seed)
-# torch.backends.cudnn.benchmark = False
+torch.backends.cudnn.benchmark = False
+fitlog.set_rng_seed(args.seed)
+torch.backends.cudnn.benchmark = False
 
 
 fitlog.add_hyper(args)
@@ -497,7 +498,8 @@ with torch.no_grad():
     print_info('{}init pram{}'.format('*' * 15, '*' * 15))
 
 loss = LossInForward()
-encoding_type = 'bmeso'
+encoding_type = 'bioes'
+# encoding_type = 'bmeso'
 if args.dataset == 'weibo':
     encoding_type = 'bio'
 f1_metric = SpanFPreRecMetric(vocabs['label'],pred='pred',target='target',seq_len='seq_len',encoding_type=encoding_type)
